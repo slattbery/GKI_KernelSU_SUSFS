@@ -17,6 +17,8 @@ env:
   UPSTREAM_REPO: https://github.com/zzh20188/GKI_KernelSU_SUSFS.git
   UPSTREAM_BRANCH: dev
   TARGET_BRANCH: dev
+  STATE_FILE: .github/.last-upstream-sync
+  KEEP_PATHS: ".github config/config config/stock_defconfig"
 
 jobs:
   check-and-build:
@@ -41,33 +43,53 @@ jobs:
           fi
           git fetch upstream "${UPSTREAM_BRANCH}"
 
-      - name: Check for new commits
+      - name: Check for new upstream commits
         id: check
         run: |
           set -euo pipefail
-          LOCAL=$(git rev-parse HEAD)
           REMOTE=$(git rev-parse "upstream/${UPSTREAM_BRANCH}")
 
-          echo "Local  (origin/${TARGET_BRANCH}): ${LOCAL}"
-          echo "Remote (upstream/${UPSTREAM_BRANCH}): ${REMOTE}"
+          if [ -f "${STATE_FILE}" ]; then
+            LAST_SYNCED=$(cat "${STATE_FILE}")
+          else
+            LAST_SYNCED=""
+          fi
 
-          if [ "${LOCAL}" != "${REMOTE}" ]; then
+          echo "Last synced upstream commit: ${LAST_SYNCED:-<none>}"
+          echo "Remote (upstream/${UPSTREAM_BRANCH}):  ${REMOTE}"
+
+          if [ "${REMOTE}" != "${LAST_SYNCED}" ]; then
             echo "has_update=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_update=false" >> "$GITHUB_OUTPUT"
           fi
+          echo "remote_sha=${REMOTE}" >> "$GITHUB_OUTPUT"
 
       - name: Sync content with upstream
         if: steps.check.outputs.has_update == 'true'
         run: |
           set -euo pipefail
 
-          git checkout "upstream/${UPSTREAM_BRANCH}" -- . ':!.github'
-          git clean -fd -e .github
-          git add -A -- . ':!.github'
+          EXCLUDE_ARGS=""
+          for p in ${KEEP_PATHS}; do
+            EXCLUDE_ARGS="${EXCLUDE_ARGS} ':done{p}'"
+          done
+
+          eval git checkout "upstream/${UPSTREAM_BRANCH}" -- . ${EXCLUDE_ARGS}
+
+          CLEAN_EXCLUDES=""
+          for p in ${KEEP_PATHS}; do
+            CLEAN_EXCLUDES="${CLEAN_EXCLUDES} -e ${p}"
+          done
+          eval git clean -fd ${CLEAN_EXCLUDES}
+
+          mkdir -p "$(dirname "${STATE_FILE}")"
+          echo "${{ steps.check.outputs.remote_sha }}" > "${STATE_FILE}"
+
+          git add -A
 
           if git diff --cached --quiet; then
-            echo "No content changes after excluding .github."
+            echo "No content changes after excluding: ${KEEP_PATHS}"
           else
             git commit -m "chore: sync with upstream/${UPSTREAM_BRANCH} ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
             git push origin "HEAD:${TARGET_BRANCH}"
@@ -95,5 +117,6 @@ jobs:
             echo "### Auto Build ReSukiSU for Moon"
             echo "- Upstream: \`${UPSTREAM_REPO}\` (\`${UPSTREAM_BRANCH}\`)"
             echo "- Target branch: \`${TARGET_BRANCH}\`"
+            echo "- Kept local (not overwritten): \`${KEEP_PATHS}\`"
             echo "- Has update: \`${{ steps.check.outputs.has_update }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
