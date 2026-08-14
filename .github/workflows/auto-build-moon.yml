@@ -16,15 +16,16 @@ concurrency:
 env:
   UPSTREAM_REPO: https://github.com/zzh20188/GKI_KernelSU_SUSFS.git
   UPSTREAM_BRANCH: dev
+  TARGET_BRANCH: dev
 
 jobs:
   check-and-build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout main
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ env.TARGET_BRANCH }}
           fetch-depth: 0
 
       - name: Configure git identity
@@ -47,7 +48,7 @@ jobs:
           LOCAL=$(git rev-parse HEAD)
           REMOTE=$(git rev-parse "upstream/${UPSTREAM_BRANCH}")
 
-          echo "Local  (origin/main): ${LOCAL}"
+          echo "Local  (origin/${TARGET_BRANCH}): ${LOCAL}"
           echo "Remote (upstream/${UPSTREAM_BRANCH}): ${REMOTE}"
 
           if [ "${LOCAL}" != "${REMOTE}" ]; then
@@ -69,7 +70,7 @@ jobs:
             echo "No content changes after excluding .github."
           else
             git commit -m "chore: sync with upstream/${UPSTREAM_BRANCH} ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
-            git push origin HEAD:main
+            git push origin "HEAD:${TARGET_BRANCH}"
           fi
 
       - name: Trigger kernel build
@@ -80,6 +81,7 @@ jobs:
           set -euo pipefail
           gh workflow run kernel-custom.yml \
             --repo "${{ github.repository }}" \
+            --ref "${TARGET_BRANCH}" \
             -f kernel_version="6.6" \
             -f os_patch_level="2025-06" \
             -f kernelsu_variant="ReSukiSU" \
@@ -92,5 +94,6 @@ jobs:
           {
             echo "### Auto Build ReSukiSU for Moon"
             echo "- Upstream: \`${UPSTREAM_REPO}\` (\`${UPSTREAM_BRANCH}\`)"
+            echo "- Target branch: \`${TARGET_BRANCH}\`"
             echo "- Has update: \`${{ steps.check.outputs.has_update }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
