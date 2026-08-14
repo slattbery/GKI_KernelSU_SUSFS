@@ -1,0 +1,96 @@
+name: Auto Build ReSukiSU for Moon
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: auto-build-resukisu-moon
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPO: https://github.com/zzh20188/GKI_KernelSU_SUSFS.git
+  UPSTREAM_BRANCH: dev
+
+jobs:
+  check-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add and fetch upstream
+        run: |
+          set -euo pipefail
+          if ! git remote get-url upstream >/dev/null 2>&1; then
+            git remote add upstream "${UPSTREAM_REPO}"
+          fi
+          git fetch upstream "${UPSTREAM_BRANCH}"
+
+      - name: Check for new commits
+        id: check
+        run: |
+          set -euo pipefail
+          LOCAL=$(git rev-parse HEAD)
+          REMOTE=$(git rev-parse "upstream/${UPSTREAM_BRANCH}")
+
+          echo "Local  (origin/main): ${LOCAL}"
+          echo "Remote (upstream/${UPSTREAM_BRANCH}): ${REMOTE}"
+
+          if [ "${LOCAL}" != "${REMOTE}" ]; then
+            echo "has_update=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_update=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Sync content with upstream
+        if: steps.check.outputs.has_update == 'true'
+        run: |
+          set -euo pipefail
+
+          git checkout "upstream/${UPSTREAM_BRANCH}" -- . ':!.github'
+          git clean -fd -e .github
+          git add -A -- . ':!.github'
+
+          if git diff --cached --quiet; then
+            echo "No content changes after excluding .github."
+          else
+            git commit -m "chore: sync with upstream/${UPSTREAM_BRANCH} ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+            git push origin HEAD:main
+          fi
+
+      - name: Trigger kernel build
+        if: steps.check.outputs.has_update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh workflow run kernel-custom.yml \
+            --repo "${{ github.repository }}" \
+            -f kernel_version="6.6" \
+            -f os_patch_level="2025-06" \
+            -f kernelsu_variant="ReSukiSU" \
+            -f use_kpm="disabled (关闭)" \
+            -f artifact_upload_mode="仅上传 AnyKernel3.zip"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Auto Build ReSukiSU for Moon"
+            echo "- Upstream: \`${UPSTREAM_REPO}\` (\`${UPSTREAM_BRANCH}\`)"
+            echo "- Has update: \`${{ steps.check.outputs.has_update }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
