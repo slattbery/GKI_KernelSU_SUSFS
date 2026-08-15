@@ -3,7 +3,13 @@ name: Auto Build ReSukiSU for Moon
 on:
   schedule:
     - cron: "0 2 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: "Force trigger kernel build"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -65,6 +71,9 @@ jobs:
           fi
           echo "remote_sha=${REMOTE}" >> "$GITHUB_OUTPUT"
 
+          FORCE="${{ github.event.inputs.force_build }}"
+          echo "force_build=${FORCE:-false}" >> "$GITHUB_OUTPUT"
+
       - name: Sync content with upstream
         if: steps.check.outputs.has_update == 'true'
         run: |
@@ -86,7 +95,7 @@ jobs:
           fi
 
       - name: Trigger kernel build
-        if: steps.check.outputs.has_update == 'true'
+        if: steps.check.outputs.has_update == 'true' || steps.check.outputs.force_build == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -98,7 +107,15 @@ jobs:
             -f os_patch_level="2025-06" \
             -f kernelsu_variant="ReSukiSU" \
             -f use_kpm="disabled (关闭)" \
-            -f artifact_upload_mode="仅上传 AnyKernel3.zip"
+            -f artifact_upload_mode="仅上传 AnyKernel3.zip" \
+            -f use_zram=true \
+            -f use_bbg=true \
+            -f use_rekernel=true \
+            -f cve_2026_43499_patch=true \
+            -f cancel_susfs=false \
+            -f supp_op=false \
+            -f droidspaces="off" \
+            -f droidspaces_ntsync=false
 
       - name: Summary
         if: always()
@@ -109,4 +126,5 @@ jobs:
             echo "- Target branch: \`${TARGET_BRANCH}\`"
             echo "- Kept local (not overwritten): \`${KEEP_PATHS}\`"
             echo "- Has update: \`${{ steps.check.outputs.has_update }}\`"
+            echo "- Force build: \`${{ steps.check.outputs.force_build }}\`"
           } >> "$GITHUB_STEP_SUMMARY"
