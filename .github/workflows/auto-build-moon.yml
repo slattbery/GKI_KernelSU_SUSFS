@@ -107,7 +107,7 @@ jobs:
             -f os_patch_level="2025-06" \
             -f kernelsu_variant="ReSukiSU" \
             -f use_kpm="disabled (关闭)" \
-            -f artifact_upload_mode="仅上传 AnyKernel3.zip" \
+            -f artifact_upload_mode="上传全部" \
             -f use_zram=true \
             -f use_bbg=true \
             -f use_rekernel=true \
