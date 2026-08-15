@@ -109,8 +109,8 @@ jobs:
             -f use_kpm="disabled (关闭)" \
             -f artifact_upload_mode="上传全部" \
             -f use_zram=true \
-            -f use_bbg=true \
-            -f use_rekernel=true \
+            -f use_bbg=false \
+            -f use_rekernel=false \
             -f cve_2026_43499_patch=true \
             -f cancel_susfs=false \
             -f supp_op=false \
