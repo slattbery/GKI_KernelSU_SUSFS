@@ -70,18 +70,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          EXCLUDE_ARGS=""
-          for p in ${KEEP_PATHS}; do
-            EXCLUDE_ARGS="${EXCLUDE_ARGS} ':done{p}'"
-          done
-
-          eval git checkout "upstream/${UPSTREAM_BRANCH}" -- . ${EXCLUDE_ARGS}
-
-          CLEAN_EXCLUDES=""
-          for p in ${KEEP_PATHS}; do
-            CLEAN_EXCLUDES="${CLEAN_EXCLUDES} -e ${p}"
-          done
-          eval git clean -fd ${CLEAN_EXCLUDES}
+          git checkout "upstream/${UPSTREAM_BRANCH}" -- . ':!.github' ':!config/config' ':!config/stock_defconfig'
+          git clean -fd -e .github -e config/config -e config/stock_defconfig
 
           mkdir -p "$(dirname "${STATE_FILE}")"
           echo "${{ steps.check.outputs.remote_sha }}" > "${STATE_FILE}"
