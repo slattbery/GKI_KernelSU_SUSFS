@@ -106,8 +106,8 @@ jobs:
             -f kernel_version="6.6" \
             -f os_patch_level="2025-06" \
             -f kernelsu_variant="ReSukiSU" \
-            -f use_kpm="disabled (关闭)" \
-            -f artifact_upload_mode="上传全部"
+            -f artifact_upload_mode="上传全部" \
+            -f build_time="$(date)"
 
       - name: Summary
         if: always()
