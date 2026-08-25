@@ -163,16 +163,17 @@ jobs:
           fi
 
       - name: Save state
-        if: steps.decision.outputs.should_build == 'true'
         run: |
           git add "${{ env.STATE_DIR }}"
-          git commit -m "chore: update dependency state" || true
-          git push origin "HEAD:${{ env.TARGET_BRANCH }}" || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update dependency state"
+            git push origin "HEAD:${{ env.TARGET_BRANCH }}"
+          fi
 
   sync-upstream:
     runs-on: ubuntu-latest
     needs: check-updates
-    if: needs.check-updates.outputs.has_upstream_update == 'true'
+    if: needs.check-updates.outputs.has_upstream_update == 'true' && needs.check-updates.outputs.should_build == 'true'
 
     steps:
       - name: Checkout
