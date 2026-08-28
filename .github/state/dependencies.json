@@ -1,0 +1,5 @@
+{
+  "kernelsu": "https://github.com/tiann/KernelSU.git:main",
+  "kernelsu_next": "https://github.com/rifsxd/KernelSU-Next.git:next",
+  "susfs": "https://github.com/simonpunk/susfs4ksu.git:main"
+}
