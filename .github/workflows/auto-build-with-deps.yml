@@ -66,21 +66,21 @@ jobs:
         run: |
           REMOTE_SHA=$(git rev-parse "upstream/${{ env.UPSTREAM_BRANCH }}")
           STATE_FILE="${{ env.STATE_DIR }}/upstream.sha"
-          
+
           mkdir -p "${{ env.STATE_DIR }}"
-          
+
           if [ -f "$STATE_FILE" ]; then
             LAST_SHA=$(cat "$STATE_FILE")
           else
             LAST_SHA=""
           fi
-          
+
           if [ "$REMOTE_SHA" != "$LAST_SHA" ]; then
             echo "has_update=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_update=false" >> "$GITHUB_OUTPUT"
           fi
-          
+
           echo "remote_sha=$REMOTE_SHA" >> "$GITHUB_OUTPUT"
           echo "last_sha=$LAST_SHA" >> "$GITHUB_OUTPUT"
 
@@ -89,9 +89,9 @@ jobs:
         run: |
           STATE_FILE="${{ env.STATE_DIR }}/dependencies.json"
           HAS_UPDATE="false"
-          
+
           mkdir -p "${{ env.STATE_DIR }}"
-          
+
           DEPS_NEW=$(cat <<'EOF'
           {
             "kernelsu": "https://github.com/tiann/KernelSU.git:main",
@@ -100,7 +100,7 @@ jobs:
           }
           EOF
           )
-          
+
           if [ ! -f "$STATE_FILE" ]; then
             echo "$DEPS_NEW" > "$STATE_FILE"
             HAS_UPDATE="true"
@@ -110,7 +110,7 @@ jobs:
               HAS_UPDATE="true"
             fi
           fi
-          
+
           echo "$DEPS_NEW" > "$STATE_FILE"
           echo "has_update=$HAS_UPDATE" >> "$GITHUB_OUTPUT"
 
@@ -119,7 +119,7 @@ jobs:
         run: |
           HAS_SUBMODULE_UPDATE="false"
           SUBMODULE_STATE="${{ env.STATE_DIR }}/submodules.sha"
-          
+
           if [ -f .gitmodules ]; then
             git config --file=.gitmodules --name-only --get-regexp path | while read submodule_path; do
               CURRENT_SHA=$(git -C "${submodule_path#submodule.}" rev-parse HEAD 2>/dev/null || echo "")
@@ -145,7 +145,7 @@ jobs:
               echo "$CURRENT_HASH" > "$SUBMODULE_STATE"
             fi
           fi
-          
+
           echo "has_update=$HAS_SUBMODULE_UPDATE" >> "$GITHUB_OUTPUT"
 
       - name: Determine if build required
@@ -155,7 +155,7 @@ jobs:
           DEPS_UPDATE="${{ steps.dependencies.outputs.has_update }}"
           SUBMODULES_UPDATE="${{ steps.submodules.outputs.has_update }}"
           FORCE_BUILD="${{ steps.inputs.outputs.force_build }}"
-          
+
           if [ "$UPSTREAM_UPDATE" = "true" ] || [ "$DEPS_UPDATE" = "true" ] || [ "$SUBMODULES_UPDATE" = "true" ] || [ "$FORCE_BUILD" = "true" ]; then
             echo "should_build=true" >> "$GITHUB_OUTPUT"
           else
@@ -198,12 +198,12 @@ jobs:
         run: |
           git checkout "upstream/${{ env.UPSTREAM_BRANCH }}" -- . ':!.github' ':!config/config' ':!config/stock_defconfig'
           git clean -fd -e .github -e config/config -e config/stock_defconfig
-          
+
           mkdir -p "${{ env.STATE_DIR }}"
           git rev-parse "upstream/${{ env.UPSTREAM_BRANCH }}" > "${{ env.STATE_DIR }}/upstream.sha"
-          
+
           git add -A
-          
+
           if ! git diff --cached --quiet; then
             git commit -m "chore: sync upstream/${{ env.UPSTREAM_BRANCH }} @ ${{ needs.check-updates.outputs.upstream_sha }}"
             git push origin "HEAD:${{ env.TARGET_BRANCH }}"
@@ -223,7 +223,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --ref "${{ env.TARGET_BRANCH }}" \
             -f kernel_version="6.6" \
-            -f os_patch_level="2025-06" \
+            -f os_patch_level="lts" \
             -f kernelsu_variant="ReSukiSU" \
             -f artifact_upload_mode="上传全部" \
             -f build_time="$(date)" \
@@ -240,13 +240,13 @@ jobs:
         run: |
           cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
           ## Auto Build Status
-          
+
           | Check | Result |
           |-------|--------|
           | Upstream Update | ${{ needs.check-updates.outputs.has_upstream_update }} |
           | Dependency Update | ${{ needs.check-updates.outputs.has_dependency_update }} |
           | Force Build | ${{ needs.check-updates.outputs.force_build }} |
           | Build Triggered | ${{ needs.check-updates.outputs.should_build }} |
-          
+
           **Upstream SHA**: `${{ needs.check-updates.outputs.upstream_sha }}`
           EOF
