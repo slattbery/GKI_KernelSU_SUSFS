@@ -14,6 +14,10 @@ on:
         description: OS Patch Level
         required: false
         default: "lts"
+      kernel_version:
+        description: Version of kernel
+        required: false
+        default: "6.12"
 
 permissions:
   contents: write
@@ -226,7 +230,7 @@ jobs:
           gh workflow run kernel-custom.yml \
             --repo "${{ github.repository }}" \
             --ref "${{ env.TARGET_BRANCH }}" \
-            -f kernel_version="6.6" \
+            -f kernel_version="${{ github.event.inputs.kernel_version }}" \
             -f os_patch_level="${{ github.event.inputs.os_patch_level }}" \
             -f kernelsu_variant="ReSukiSU" \
             -f artifact_upload_mode="上传全部" \
