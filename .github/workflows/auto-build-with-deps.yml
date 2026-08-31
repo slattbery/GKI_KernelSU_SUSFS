@@ -10,6 +10,10 @@ on:
         required: false
         type: boolean
         default: false
+      os_patch_level:
+        description: OS Patch Level
+        required: false
+        default: "2026-07"
 
 permissions:
   contents: write
@@ -223,7 +227,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --ref "${{ env.TARGET_BRANCH }}" \
             -f kernel_version="6.6" \
-            -f os_patch_level="2025-06" \
+            -f os_patch_level="${{ github.event.inputs.force_build }}" \
             -f kernelsu_variant="ReSukiSU" \
             -f artifact_upload_mode="上传全部" \
             -f build_time="$(date)" \
