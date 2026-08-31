@@ -227,7 +227,7 @@ jobs:
             --repo "${{ github.repository }}" \
             --ref "${{ env.TARGET_BRANCH }}" \
             -f kernel_version="6.6" \
-            -f os_patch_level="${{ github.event.inputs.force_build }}" \
+            -f os_patch_level="${{ github.event.inputs.os_patch_level }}" \
             -f kernelsu_variant="ReSukiSU" \
             -f artifact_upload_mode="上传全部" \
             -f build_time="$(date)" \
