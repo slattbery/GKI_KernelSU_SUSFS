@@ -234,7 +234,7 @@ jobs:
             -f os_patch_level="${{ github.event.inputs.os_patch_level }}" \
             -f kernelsu_variant="ReSukiSU" \
             -f artifact_upload_mode="上传全部" \
-            -f build_time="$(date)" \
+            -f build_time="$(date -u '+%a %b %d %H:%M:%S UTC %Y')" \
             -f cve_2026_43499_patch=true \
             -f use_zram=true
 
