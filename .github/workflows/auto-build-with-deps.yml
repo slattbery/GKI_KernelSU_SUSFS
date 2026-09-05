@@ -17,7 +17,7 @@ on:
       kernel_version:
         description: Version of kernel
         required: false
-        default: "6.12"
+        default: "6.6"
 
 permissions:
   contents: write
@@ -236,7 +236,7 @@ jobs:
             -f artifact_upload_mode="上传全部" \
             -f build_time="$(date)" \
             -f cve_2026_43499_patch=true \
-            -f use_zram=${{ github.event.inputs.kernel_version != '6.12' }}
+            -f use_zram=true
 
   report:
     runs-on: ubuntu-latest
