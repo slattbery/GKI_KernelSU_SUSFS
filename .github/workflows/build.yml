@@ -181,6 +181,8 @@ jobs:
 
       - name: 检出代码仓库
         uses: actions/checkout@v7
+        with:
+          clean: false
 
       - name: 初始化构建环境
         run: |
